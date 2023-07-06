@@ -2,6 +2,7 @@ package com.example.tddminiproject.models;
 
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotEmpty;
+import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
 import java.time.LocalDate;
 
@@ -14,6 +15,7 @@ public class Order {
     private Long id;
 
     @NotEmpty(message = "Customer name is required")
+    @NotNull(message = "Customer name is required")
     private String customerName;
 
     private LocalDate orderDate;
