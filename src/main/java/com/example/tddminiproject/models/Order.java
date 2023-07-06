@@ -1,7 +1,8 @@
 package com.example.tddminiproject.models;
 
 import jakarta.persistence.*;
-
+import jakarta.validation.constraints.NotEmpty;
+import jakarta.validation.constraints.Positive;
 import java.time.LocalDate;
 
 @Entity
@@ -9,12 +10,18 @@ import java.time.LocalDate;
 public class Order {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.AUTO)
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @NotEmpty(message = "Customer name is required")
     private String customerName;
+
     private LocalDate orderDate;
+
+    @NotEmpty(message = "Shipping address is required")
     private String shippingAddress;
+
+    @Positive(message = "Total must be a positive value")
     private Double total;
 
     // Constructors
