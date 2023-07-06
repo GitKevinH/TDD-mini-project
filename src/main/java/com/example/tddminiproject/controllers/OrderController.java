@@ -2,13 +2,20 @@ package com.example.tddminiproject.controllers;
 
 import com.example.tddminiproject.models.Order;
 import com.example.tddminiproject.repositories.OrderRepository;
+import org.springframework.validation.BindingResult;
+import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.validation.DefaultMessageCodesResolver;
+import org.springframework.validation.FieldError;
+import org.springframework.validation.ObjectError;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/orders")
@@ -21,49 +28,62 @@ public class OrderController {
         this.orderRepository = orderRepository;
     }
 
-    // GET /orders
-    @GetMapping
-    public List<Order> getAllOrders() {
-        // Implement logic to retrieve and return all orders from the repository
-        return orderRepository.findAll();
-    }
-
-    // POST /orders
     @PostMapping
-    public ResponseEntity<Order> createOrder(@RequestBody Order order) {
-        // Implement logic to create a new order and save it to the repository
+    public ResponseEntity<?> createOrder(@Valid @RequestBody Order order, BindingResult bindingResult) {
+        if (bindingResult.hasErrors()) {
+            List<String> errors = new ArrayList<>();
+            DefaultMessageCodesResolver resolver = new DefaultMessageCodesResolver();
+            for (ObjectError error : bindingResult.getAllErrors()) {
+                String[] codes = resolver.resolveMessageCodes(error.getCode(), error.getObjectName(), error.getDefaultMessage(), String.class);
+                for (String code : codes) {
+                    errors.add(code);
+                }
+            }
+            return ResponseEntity.badRequest().body(errors);
+        }
+
         Order savedOrder = orderRepository.save(order);
         return ResponseEntity.status(HttpStatus.CREATED).body(savedOrder);
     }
 
-    // GET /orders/{id}
+    @GetMapping
+    public ResponseEntity<List<Order>> getOrders() {
+        List<Order> orders = orderRepository.findAll();
+        return ResponseEntity.ok(orders);
+    }
+
     @GetMapping("/{id}")
-    public ResponseEntity<Order> getOrderById(@PathVariable Long id) {
-        // Implement logic to retrieve an order by its ID from the repository
+    public ResponseEntity<?> getOrderById(@PathVariable Long id) {
         return orderRepository.findById(id)
-                .map(order -> ResponseEntity.ok().body(order))
+                .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
     }
 
-    // PUT /orders/{id}
     @PutMapping("/{id}")
-    public ResponseEntity<Order> updateOrder(@PathVariable Long id, @RequestBody Order updatedOrder) {
-        // Implement logic to update an existing order by its ID
+    public ResponseEntity<?> updateOrder(@PathVariable Long id, @Valid @RequestBody Order updatedOrder, BindingResult bindingResult) {
+        if (bindingResult.hasErrors()) {
+            List<String> errors = bindingResult.getFieldErrors()
+                    .stream()
+                    .map(FieldError::getDefaultMessage)
+                    .collect(Collectors.toList());
+            return ResponseEntity.badRequest().body(errors);
+        }
+
         return orderRepository.findById(id)
                 .map(existingOrder -> {
                     existingOrder.setCustomerName(updatedOrder.getCustomerName());
                     existingOrder.setOrderDate(updatedOrder.getOrderDate());
                     existingOrder.setShippingAddress(updatedOrder.getShippingAddress());
                     existingOrder.setTotal(updatedOrder.getTotal());
-                    Order savedOrder = orderRepository.save(existingOrder);
-                    return ResponseEntity.ok().body(savedOrder);
+                    orderRepository.save(existingOrder);
+                    return ResponseEntity.ok(existingOrder);
                 })
                 .orElse(ResponseEntity.notFound().build());
     }
 
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteOrder(@PathVariable Long id) {
-
+        // Implement logic to delete an order by its ID
         Optional<Order> optionalOrder = orderRepository.findById(id);
         if (optionalOrder.isPresent()) {
             Order existingOrder = optionalOrder.get();
@@ -73,6 +93,4 @@ public class OrderController {
             return ResponseEntity.notFound().build();
         }
     }
-
 }
-
